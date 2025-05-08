@@ -1,0 +1,24 @@
+using Telegram.Bot.Types.ReplyMarkups;
+
+namespace GlobalBotV2
+{
+    public static class Buttons
+    {
+        public static IReplyMarkup GetKeyboard(bool isAdmin)
+        {
+            var buttons = new List<List<KeyboardButton>>();
+
+            if (isAdmin)
+            {
+                buttons.Add(new List<KeyboardButton> { new KeyboardButton("Admin Option 1"), new KeyboardButton("Admin Option 2") });
+            }
+
+            buttons.Add(new List<KeyboardButton> { new KeyboardButton("User Option 1"), new KeyboardButton("User Option 2") });
+
+            return new ReplyKeyboardMarkup(buttons)
+            {
+                ResizeKeyboard = true
+            };
+        }
+    }
+}
