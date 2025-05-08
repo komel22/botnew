@@ -1,0 +1,125 @@
+Reply Markup
+reply markup tests
+
+Telegram provides two types of reply markup: Custom reply keyboards and Inline keyboards.
+
+Custom reply keyboards
+These are buttons visible below the textbox. Pressing such button will make the user send a message in the chat
+
+Whenever your bot sends a message, it can pass along a special keyboard with predefined reply options. Regular keyboards are represented by KeyboardButton and ReplyKeyboardMarkup objects. When the user click such buttons, it will make him send a message to the chat. It can be a simple predefined text, a contact or location information, or even a poll.
+
+Keyboard is an array of button rows, each represented by an array of KeyboardButton objects. KeyboardButton supports text and emoji.
+
+By default, reply keyboards are displayed until a new keyboard is sent by a bot.
+
+Single-row keyboard markup
+A reply keyboard with two buttons in a single row:
+
+// using Telegram.Bot.Types.ReplyMarkups;
+
+var sent = await bot.SendMessage(chatId, "Choose a response",
+                                 replyMarkup: new string[] { "Help me", "Call me ☎️" });
+Simple text buttons can be passed directly as strings
+
+If using ReplyKeyboardMarkup, we would have to specify true on the constructor to resize the keyboard vertically for optimal fit (e.g., make the keyboard smaller if there are just two rows of buttons).
+
+Multi-row keyboard markup
+For a reply keyboard with two rows of buttons, we use an array of arrays:
+
+// using Telegram.Bot.Types.ReplyMarkups;
+
+var sent = await bot.SendMessage(chatId, "Choose a response", replyMarkup: new string[][]
+{
+    ["Help me"],
+    ["Call me ☎️", "Write me ✉️"]
+});
+Requesting information to be sent to the bot
+Some special keyboard button types can be used to request information from the user and send them to the bot.
+
+Below are some simple examples of what you can do. More options are available in associated class properties.
+
+KeyboardButton.WithRequestLocation("Share your location")
+User's position will be transmitted in a message.Location
+KeyboardButton.WithRequestContact("Share your info")
+User's phone number will be transmitted in a message.Contact
+KeyboardButton.WithRequestPoll("Create a poll", PollType.Regular)
+User must create a poll which gets transmitted in a message.Poll
+KeyboardButton.WithRequestChat("Select a chat", 1234, false)
+User must pick a group (false) or channel (true) which gets transmitted in a message.ChatShared
+KeyboardButton.WithRequestUsers("Select user(s)", 5678, 1)
+User must pick 1-10 user(s) which get transmitted in a message.UsersShared
+KeyboardButton.WithWebApp("Launch WebApp", "https://www.example.com/game")
+Launch a Mini-App
+// using Telegram.Bot.Types.ReplyMarkups;
+
+var sent = await bot.SendMessage(chatId, "Who or Where are you?", replyMarkup: new KeyboardButton[]
+{
+    KeyboardButton.WithRequestLocation("Share Location"),
+    KeyboardButton.WithRequestContact("Share Contact")
+});
+Remove keyboard
+To remove the keyboard you have to send an instance of ReplyKeyboardRemove in a new message:
+
+// using Telegram.Bot.Types.ReplyMarkups;
+
+await bot.SendMessage(chatId, "Removing keyboard", replyMarkup: new ReplyKeyboardRemove());
+Inline keyboards
+These are buttons visible below a bot message. Pressing such button will NOT make the user send a message
+
+There are times when you'd prefer to do things without sending any messages to the chat. For example, when your user is changing settings or flipping through search results. In such cases you can use Inline Keyboards that are integrated directly into the messages they belong to.
+
+Unlike custom reply keyboards, pressing buttons on inline keyboards doesn't result in messages sent to the chat. Instead, inline keyboards support buttons that work behind the scenes: callback buttons, URL buttons and switch to inline buttons.
+
+You can have several rows and columns of inline buttons of mixed types.
+
+Callback buttons
+When a user presses a callback button, no messages are sent to the chat, and your bot simply receives an update.CallbackQuery instead (containing many information).
+Upon receiving this, your bot should answer to that query within 10 seconds, using AnswerCallbackQuery (or else the button gets momentarily disabled)
+
+In this example, the arrays of InlineKeyboardButton are constructed from tuples (title, callbackData):
+
+// using Telegram.Bot.Types.ReplyMarkups;
+
+var sent = await bot.SendMessage(chatId, "A message with an inline keyboard markup",
+    replyMarkup: new InlineKeyboardButton[][]
+    {
+        [("1.1", "11"), ("1.2", "12")], // two buttons on first row
+        [("2.1", "21"), ("2.2", "22")]  // two buttons on second row
+    });
+Callback data string can be up to 64 bytes. You can construct them explicitly via InlineKeyboardButton.WithCallbackData
+
+URL buttons
+Buttons of this type have a small arrow icon to help the user understand that tapping on a URL button will open an external link. In this example we pass a single InlineKeyboardButton, and the constructor understand the second argument is an URL rather than callbackData.
+
+// using Telegram.Bot.Types.ReplyMarkups;
+
+var sent = await bot.SendMessage(chatId, "A message with an inline keyboard markup",
+        replyMarkup: new InlineKeyboardButton("Repository Link", "https://github.com/TelegramBots/Telegram.Bot"));
+You can also construct URL buttons via InlineKeyboardButton.WithUrl
+
+Switch to Inline buttons
+Pressing a switch to inline button prompts the user to select a chat, opens it and inserts the bot's username into the input field. You can also pass a query that will be inserted along with the username – this way your users will immediately get some inline results they can share. In this example we use InlineKeyboardButton.WithSwitchInlineQuery and InlineKeyboardButton.WithSwitchInlineQueryCurrentChat helper methods to create buttons which will insert the bot's username in the chat's input field.
+
+// using Telegram.Bot.Types.ReplyMarkups;
+
+var sent = await bot.SendMessage(chatId, "A message with an inline keyboard markup",
+    replyMarkup: new InlineKeyboardButton[]
+    {
+        InlineKeyboardButton.WithSwitchInlineQuery("switch_inline_query"),
+        InlineKeyboardButton.WithSwitchInlineQueryCurrentChat("switch_inline_query_current_chat")
+    });
+Other inline button types
+Some more special inline button types can be used.
+
+Below are some simple examples of what you can do. More options are available in associated class properties.
+
+InlineKeyboardButton.WithCopyText("Copy info", "Text to copy"))
+Store a text in the user clipboard
+InlineKeyboardButton.WithWebApp("Launch WebApp", "https://www.example.com/game"))
+Launch a Mini-App
+InlineKeyboardButton.WithLoginUrl("Login", new() { Url = "https://www.example.com/telegramAuth" }))
+Authenticate the Telegram user via a website (Domain must be configured in @BotFather)
+InlineKeyboardButton.WithCallbackGame("Launch game"))
+Launch an HTML game (Game must be configured in @BotFather)
+InlineKeyboardButton.WithPay("Pay 200 XTR"))
+Customize the Pay button caption (only during a SendInvoice call)

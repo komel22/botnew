@@ -1,0 +1,145 @@
+Media Messages
+There are different types of media messages that a bot can send (photos, videos, documents...). Fortunately, methods for sending such messages are similar (see sections below for examples)
+
+But let's first see what they have in common.
+
+Providing the source file
+You can provide the file data in 3 ways:
+
+Using the Internet URL to the file (must point to the actual file, not an HTML webpage)
+Uploading the file data as a stream
+Using the FileId of a file that was already sent over Telegram (ex: msg.Video.FileId, msg.Photo[^1].FileId...)
+Examples in this section show all three. You will learn more about them later on when we discuss file upload and download.
+
+Providing the caption
+Media messages can optionally have a text attached to them (called "Caption").
+
+Similar to text message, the caption can have text effects (specifying ParseMode.HTML or Markdown, or manual captionEntities)
+
+The Message object returned by the Send* method will have:
+
+message.Caption: caption in plain text without effects
+message.CaptionEntities: list of text effects to be applied to the plain text
+message.CaptionEntityValues: caption text parts covered by these entities
+You can use our extension methods message.ToHtml() or message.ToMarkdown() to convert the caption & entities of a Message back into HTML (recommended) or Markdown.
+
+Photo
+send photo method photo tests
+
+Sending a photo is simple. Here is an example:
+
+var message = await bot.SendPhoto(chatId, "https://telegrambots.github.io/book/docs/photo-ara.jpg",
+    "<b>Ara bird</b>. <i>Source</i>: <a href=\"https://pixabay.com\">Pixabay</a>", ParseMode.Html);
+photo message
+
+Here we sent a caption in HTML format. The user can click on Pixabay in the caption to open its URL in the browser.
+
+The Message returned by the SendPhoto method represents a photo message because message.Photo has a value. Its value is an array with each PhotoSize representing the same photo in different resolutions, with the largest dimensions last.
+
+Sticker
+send sticker method sticker tests
+
+Telegram stickers are fun. They can be static (PNG or WebP format), animated or video stickers
+
+This code sends the same sticker twice. First by passing an URL to a WebP sticker file and second by reusing FileId of the same sticker on Telegram servers.
+
+var message1 = await bot.SendSticker(chatId, "https://telegrambots.github.io/book/docs/sticker-fred.webp");
+var message2 = await bot.SendSticker(chatId, message1.Sticker!.FileId);
+sticker messages
+
+Video
+method sendVideo tests
+
+You can send video via MP4 files (other formats may not be supported natively by Telegram clients and can be sent as Document)
+
+Let's send it differently this time by uploading the file from disk. To run this example, download the Hawk video to your disk.
+
+await using Stream stream = File.OpenRead("./video-hawk.mp4");
+await bot.SendVideo(chatId, stream);
+video message screenshot
+
+Videos, like other multimedia messages, can have caption, reply, reply markup, and etc. You can optionally specify the duration and resolution of the video.
+
+In the example below, we send a video of a 10 minute countdown and expect the Telegram clients to stream that long video instead of downloading it completely. We also set a thumbnail image for our video.
+
+await bot.SendVideo(chatId, "https://telegrambots.github.io/book/docs/video-countdown.mp4",
+    thumbnail: "https://telegrambots.github.io/book/2/docs/thumb-clock.jpg", supportsStreaming: true);
+video screenshot 1
+
+User should be able to seek through the video without the video being downloaded completely.
+
+Audio
+send audio method audio tests
+
+Here is the code to send an MP3 soundtrack.
+
+var msg = await bot.SendAudio(chatId, "https://telegrambots.github.io/book/docs/audio-guitar.mp3"
+    //  , performer: "Joel Thomas Hunger", title: "Fun Guitar and Ukulele", duration: 91    // optional
+    );
+You might be wondering why some parameters are commented out? That's because this MP3 file has metadata on it and Telegram does a good job at reading it.
+
+audio message
+
+The method returns an audio Message with the metadata associated with the audio (ex: msg.Audio.Performer, msg.Audio.Duration...)
+
+Voice
+send voice method
+
+A voice message is similar to audio but has OGG format and is not shown in music player.
+
+Here we pass a value for duration because Telegram can't figure that out from a file's metadata.
+
+var msg = await bot.SendVoice(chatId, "https://telegrambots.github.io/book/docs/voice-nfl_commentary.ogg", duration: 36);
+voice message
+
+A voice message is returned from the method. Inspect the msg.Voice properties to learn more.
+
+Video Note
+method sendVideoNote
+
+Sending video notes is similar to video, but they are shown in circles to the user, usually short (1 minute or less) with identical width and height.
+
+Note: Sending video note via an URL is not supported currently.
+
+Download the Sea Waves video to your disk for this example.
+
+await using Stream stream = File.OpenRead("path/to/video-waves.mp4");
+await bot.SendVideoNote(chatId, stream, duration: 47, length: 360); // length = width = height
+video note screenshot
+
+Document (files)
+sendDocument method tests
+
+Use SendDocument method to send general files.
+
+await bot.SendDocument(chatId, "https://telegrambots.github.io/book/docs/photo-ara.jpg",
+    "<b>Ara bird</b>. <i>Source</i>: <a href=\"https://pixabay.com\">Pixabay</a>", ParseMode.Html);
+Using SendDocument to send a photo or video ensure that the file data is unchanged (not recompressed and metadata are preserved)
+
+Animation (GIF or gifv)
+sendAnimation method tests
+
+Use SendAnimation method to send animation files (GIF or H.264/MPEG-4 AVC video without sound).
+
+await bot.SendAnimation(chatId, "https://telegrambots.github.io/book/docs/video-waves.mp4", "Waves");
+Media group (album of multiple media)
+send media group method tests
+
+Using SendMediaGroup method you can send a group of photos, videos, documents or audios as an album. Documents and audio files can be only grouped in an album with messages of the same type.
+
+var messages = await bot.SendMediaGroup(chatId, new IAlbumInputMedia[]
+    {
+        new InputMediaPhoto("https://cdn.pixabay.com/photo/2017/06/20/19/22/fuchs-2424369_640.jpg"),
+        new InputMediaPhoto("https://cdn.pixabay.com/photo/2017/04/11/21/34/giraffe-2222908_640.jpg"),
+    });
+Note that media groups can't have reply markup. The caption must be set on one of the media (usually the first)
+
+Receiving a media group (album)
+When your bot receives updates for a media group, it will appear as separate messages (one per media, usually consecutive) having the same MediaGroupId property.
+
+You should collect them progressively as you receive those messages.
+There is no way to know how many medias are in the album, so here are some techniques:
+
+look for consecutive messages in that chat with same MediaGroupId and stop when it's not the same
+stop after 10 medias in the group (maximum)
+use a timeout of a few seconds not receiving new messages in that chat to determine the end
